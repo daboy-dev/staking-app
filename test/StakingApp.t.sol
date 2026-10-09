@@ -64,4 +64,151 @@ contract StakingAppTest is Test {
         vm.stopPrank();
     }
 
+    function testIncorrectAmountShouldRevert() external {
+        vm.startPrank(randomUser);
+
+        vm.expectRevert("Incorrect amount");
+        stakingApp.depositTokens(5);
+
+        vm.stopPrank();
+    }
+
+    function testDepositTokensCorrectly() external {
+        vm.startPrank(randomUser);
+
+        uint256 amount = stakingApp.fixedStakingAmount();
+        uint256 userBalanceBefore = stakingApp.userBalance(randomUser);
+        uint256 claimTimestampBefore = stakingApp.claimTimestamp(randomUser);
+        _depositTokens(amount);
+
+        uint256 userBalanceAfter = stakingApp.userBalance(randomUser);
+        uint256 claimTimestampAfter = stakingApp.claimTimestamp(randomUser);
+
+        assertEq(userBalanceAfter - userBalanceBefore, amount);
+        assertEq(claimTimestampBefore, 0);
+        assertEq(claimTimestampAfter, block.timestamp);
+
+        vm.stopPrank();
+    }
+
+    function testCanNotDepositTwice() external {
+        vm.startPrank(randomUser);
+
+        uint256 userBalanceBefore = stakingApp.userBalance(randomUser);
+        uint256 claimTimestampBefore = stakingApp.claimTimestamp(randomUser);
+        uint256 amount = stakingApp.fixedStakingAmount();
+        _depositTokens(amount);
+
+        uint256 userBalanceAfter = stakingApp.userBalance(randomUser);
+        uint256 claimTimestampAfter = stakingApp.claimTimestamp(randomUser);
+
+        assertEq(userBalanceAfter - userBalanceBefore, amount);
+        assertEq(claimTimestampBefore, 0);
+        assertEq(claimTimestampAfter, block.timestamp);
+
+
+        stakingToken.mint(amount);
+        vm.expectRevert("User already deposited");
+        stakingApp.depositTokens(amount);
+
+        vm.stopPrank();
+    }
+
+    function testCanNotWithdrawIfNotStaking() external {
+        vm.startPrank(randomUser);
+
+        vm.expectRevert("You haven't deposited yet");
+        stakingApp.withdrawTokens();
+
+        vm.stopPrank();
+    }
+
+
+    function testWithdrawTokensCorrectly() external {
+        vm.startPrank(randomUser);
+
+        uint256 amount = stakingApp.fixedStakingAmount();
+        _depositTokens(amount);
+
+        uint256 balanceBeforeWithdraw = IERC20(stakingToken).balanceOf(randomUser);
+        stakingApp.withdrawTokens();
+        uint256 balanceAfterWithdraw = IERC20(stakingToken).balanceOf(randomUser);
+
+        assertEq(balanceAfterWithdraw - balanceBeforeWithdraw, amount);
+        assertEq(stakingApp.userBalance(randomUser), 0);
+
+        vm.stopPrank();
+    }
+
+    function testCanNotClaimIfNotStaking() external {
+        vm.startPrank(randomUser);
+
+        vm.expectRevert("You haven't deposited yet");
+        stakingApp.claimRewards();
+
+        vm.stopPrank();
+    }
+
+    function testCanNotClaimIfNotElapsedTime() external {
+        vm.startPrank(randomUser);
+
+        uint256 amount = stakingApp.fixedStakingAmount();
+        _depositTokens(amount);
+
+        vm.expectRevert("Need to wait!");
+        stakingApp.claimRewards();
+
+        vm.stopPrank();
+    }
+
+    function testShouldRevertClaimIfNoEther() external {
+        vm.startPrank(randomUser);
+
+        uint256 amount = stakingApp.fixedStakingAmount();
+        stakingToken.mint(amount);
+        IERC20(stakingToken).approve(address(stakingApp), amount);
+        stakingApp.depositTokens(amount);
+
+        vm.warp(block.timestamp + stakingApp.stakingPeriod());
+
+        vm.expectRevert("Transfer failed");
+        stakingApp.claimRewards();
+
+        vm.stopPrank();
+    }
+
+    function testCanClaimRewardsCorrectly() external {
+        vm.startPrank(randomUser);
+
+        uint256 amount = stakingApp.fixedStakingAmount();
+        _depositTokens(amount);
+
+        vm.warp(block.timestamp + stakingApp.stakingPeriod());
+
+        vm.stopPrank();
+        vm.startPrank(owner);
+        uint256 etherAmount = 100000 ether;
+        vm.deal(owner, etherAmount);
+        (bool success,) = address(stakingApp).call{ value: etherAmount }("");
+        assertTrue(success);
+        vm.stopPrank();
+        vm.startPrank(randomUser);
+
+        uint256 userBalanceBefore = address(randomUser).balance;
+        stakingApp.claimRewards();
+        uint256 userBalanceAfter = address(randomUser).balance;
+        uint256 elapsedPeriodAfter = stakingApp.claimTimestamp(randomUser);
+
+        assertEq(userBalanceAfter - userBalanceBefore, rewardPerPeriod);
+        assertEq(elapsedPeriodAfter, block.timestamp);
+
+        vm.stopPrank();
+    }
+
+    function _depositTokens(uint256 amount) internal {
+        stakingToken.mint(amount);
+        IERC20(stakingToken).approve(address(stakingApp), amount);
+        stakingApp.depositTokens(amount);
+    }
+
 }
