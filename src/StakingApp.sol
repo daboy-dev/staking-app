@@ -41,7 +41,13 @@ contract StakingApp is Ownable {
     /// @param stakingPeriod_ Time, in seconds, between reward claims.
     /// @param fixedStakingAmount_ Exact amount of tokens each user must stake.
     /// @param rewardPerPeriod_ ETH (in wei) paid per claim.
-    constructor(address stakingToken_, address owner_ , uint256 stakingPeriod_, uint256 fixedStakingAmount_, uint256 rewardPerPeriod_) Ownable(owner_) {
+    constructor(
+        address stakingToken_,
+        address owner_,
+        uint256 stakingPeriod_,
+        uint256 fixedStakingAmount_,
+        uint256 rewardPerPeriod_
+    ) Ownable(owner_) {
         stakingToken = stakingToken_;
         stakingPeriod = stakingPeriod_;
         fixedStakingAmount = fixedStakingAmount_;
@@ -101,5 +107,4 @@ contract StakingApp is Ownable {
         stakingPeriod = newPeriod_;
         emit ChangeStakingPeriod(newPeriod_);
     }
-
 }

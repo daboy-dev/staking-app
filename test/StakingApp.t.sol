@@ -55,7 +55,7 @@ contract StakingAppTest is Test {
         uint256 etherToReceive = 1 ether;
         uint256 beforeBalance = address(stakingApp).balance;
 
-        (bool success,) = address(stakingApp).call{ value: etherToReceive }("");
+        (bool success,) = address(stakingApp).call{value: etherToReceive}("");
         uint256 afterBalance = address(stakingApp).balance;
 
         assertTrue(success);
@@ -106,7 +106,6 @@ contract StakingAppTest is Test {
         assertEq(claimTimestampBefore, 0);
         assertEq(claimTimestampAfter, block.timestamp);
 
-
         stakingToken.mint(amount);
         vm.expectRevert("User already deposited");
         stakingApp.depositTokens(amount);
@@ -122,7 +121,6 @@ contract StakingAppTest is Test {
 
         vm.stopPrank();
     }
-
 
     function testWithdrawTokensCorrectly() external {
         vm.startPrank(randomUser);
@@ -189,7 +187,7 @@ contract StakingAppTest is Test {
         vm.startPrank(owner);
         uint256 etherAmount = 100000 ether;
         vm.deal(owner, etherAmount);
-        (bool success,) = address(stakingApp).call{ value: etherAmount }("");
+        (bool success,) = address(stakingApp).call{value: etherAmount}("");
         assertTrue(success);
         vm.stopPrank();
         vm.startPrank(randomUser);
@@ -210,5 +208,4 @@ contract StakingAppTest is Test {
         IERC20(stakingToken).approve(address(stakingApp), amount);
         stakingApp.depositTokens(amount);
     }
-
 }
